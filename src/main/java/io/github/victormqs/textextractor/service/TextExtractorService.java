@@ -1,5 +1,8 @@
 package io.github.victormqs.textextractor.service;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.springframework.stereotype.Service;
@@ -12,13 +15,17 @@ import java.util.Objects;
 public class TextExtractorService {
 
     public String extractText(MultipartFile file) throws IOException {
-        String filename = file.getOriginalFilename();
+        String filename = Objects.requireNonNull(file.getOriginalFilename()).toLowerCase();
 
-        if (Objects.requireNonNull(filename).endsWith(".docx")) {
+        if (filename.endsWith(".docx")) {
             return extractDOCX(file);
+        } else if (filename.endsWith(".txt")) {
+            return extractTXT(file);
+        } else if (filename.endsWith(".pdf")) {
+            return extractPDF(file);
         }
 
-        return extractTXT(file);
+        throw new IllegalArgumentException("Formato de arquivo não suportado.");
     }
 
     private String extractTXT(MultipartFile file) throws IOException {
@@ -37,5 +44,12 @@ public class TextExtractorService {
         }
 
         return text.toString();
+    }
+
+    private String extractPDF(MultipartFile file) throws IOException {
+        try (PDDocument document = Loader.loadPDF(file.getBytes())) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            return stripper.getText(document);
+        }
     }
 }
